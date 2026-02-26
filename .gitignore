@@ -1,0 +1,12 @@
+.venv/
+
+.jupyter/
+.jupyter_data/
+.jupyter_runtime/
+
+__pycache__/
+*.pyc
+
+reports/*.aux
+reports/*.log
+reports/*.synctex.gz
