@@ -6,13 +6,13 @@
 \usepackage{enumitem}
 \usepackage{float}
 \setlength{\parindent}{0pt}
-\setlength{\parskip}{4pt}
+\setlength{\parskip}{2pt}
 \captionsetup{font=small}
 \begin{document}
 
 \begin{center}
-    {\Large \textbf{Proposal: Smart-City Traffic Analysis using NYC Taxi Trips}}\\[6pt]
-    {\normalsize CS F415 Data Mining \quad|\quad Group 5}\\[3pt]
+    {\Large \textbf{Proposal: Smart-City Traffic Analysis using NYC Taxi Trips}}\\[5pt]
+    {\normalsize CS F415 Data Mining \quad|\quad Group 5}\\[2pt]
     {\small
     Chaitanya Keyal (2023B4A70727H) \quad
     Alex Antony (2023B4A70734H)\\
@@ -21,13 +21,15 @@
     }
 \end{center}
 
-\textbf{1. Executive Summary}\
-A Municipal Corporation requires data-driven interventions to reduce traffic congestion and improve transit planning. We analyzed the NYC Taxi Trip Duration dataset with \textbf{1,458,644} trips from \textbf{January 1, 2016 to June 30, 2016}. The dataset contains 11 features including pickup/dropoff timestamps, GPS coordinates, passenger count, and trip duration. This proposal defines three linked data mining tasks: (1) \textit{trip duration prediction} for travel-time estimation and anomaly detection, (2) \textit{spatial demand clustering} for high-demand zone discovery, and (3) \textit{congestion-level classification} for dynamic transit scheduling and traffic response.
+\section*{1. Executive Summary}
+The Municipal Corporation needs data-driven interventions to reduce congestion and improve transit planning. We analyze the NYC Taxi Trip Duration dataset with \textbf{1,458,644} trips from \textbf{January 1, 2016 to June 30, 2016}. The dataset has 11 features, including pickup/dropoff timestamps, GPS coordinates, passenger count, and trip duration.
 
-\textbf{2. Data Exploration Summary}\
-The dataset is complete (no missing values) and temporally consistent (no pickup-after-dropoff records; no mismatch between computed and provided duration). Basic profiling indicates heavy right-skew in trip duration and strong time-of-day effects in both trip counts and speed.
+We formulate three linked mining tasks: (1) \textit{trip duration prediction}, (2) \textit{spatial demand clustering}, and (3) \textit{congestion-level classification}. Together, these support operational planning, infrastructure prioritization, and policy design.
 
-\textbf{Key Statistics}
+\section*{2. Data Exploration Summary}
+The data is complete (no missing values) and temporally consistent (no pickup-after-dropoff records; no mismatch between computed and provided durations). Profiling shows strong right-skew in trip duration and clear time-of-day effects in demand and speed.
+
+\begin{center}\textbf{Key statistics}\end{center}\vspace{-10pt}
 \begin{table}[H]
     \centering
     \small
@@ -49,63 +51,60 @@ The dataset is complete (no missing values) and temporally consistent (no pickup
     \end{tabular}
 \end{table}
 
-\textbf{Data Quality Findings}
-\begin{itemize}[leftmargin=1.4em,itemsep=2pt,topsep=2pt]
-    \item Coordinates outside NYC bounds (40.4--41.0 N, -74.3 to -73.7 W): \textbf{985 trips} (0.0675\%); invalid pickups: 247, invalid dropoffs: 971.
-    \item Short-duration anomalies ($<$60 s): \textbf{8,595 trips} (0.5892\%); long-duration anomalies ($>$24 h): \textbf{4 trips}.
-    \item Passenger-count anomalies: \textbf{60} zero-passenger trips; \textbf{5} trips with $>$6 passengers.
-    \item Estimated speed anomalies ($>$100 km/h): \textbf{175 trips}; zero-distance trips: \textbf{5,897}.
+\textbf{Data quality findings}
+\begin{itemize}[leftmargin=1.3em,itemsep=0pt,topsep=0pt]
+    \item Coordinates outside NYC bounds (40.4--41.0 N, -74.3 to -73.7 W): \textbf{985 trips} (0.0675\%); invalid pickups: 247 and invalid dropoffs: 971.
+    \item Duration outliers include \textbf{8,595} short trips ($<$60 s, 0.5892\%) and \textbf{4} extreme long trips ($>$24 h).
+    \item Passenger-count anomalies are limited: \textbf{60} zero-passenger trips and \textbf{5} trips with more than 6 passengers.
+    \item Derived-metric checks show \textbf{175} speed anomalies ($>$100 km/h) and \textbf{5,897} zero-distance trips.
 \end{itemize}
 
-\textbf{Notable Patterns}
-\begin{itemize}[leftmargin=1.4em,itemsep=2pt,topsep=2pt]
-    \item Demand shows clear commute peaks in morning and evening hours.
-    \item Median speed drops during peak windows, indicating higher congestion.
-    \item Spatial demand is concentrated around core Manhattan and major airport corridors.
+\textbf{Notable patterns}
+\begin{itemize}[leftmargin=1.3em,itemsep=0pt,topsep=1pt]
+    \item Demand peaks during morning and evening commute windows.
+    \item Median speed declines during those peak windows.
+    \item Spatial demand concentrates in core Manhattan and airport corridors.
 \end{itemize}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.48\textwidth]{../figures/trip_volume_by_hour.png}\hfill
-    \includegraphics[width=0.48\textwidth]{../figures/speed_by_hour.png}
-    \caption{Left: hourly trip demand reveals AM/PM peak periods. Right: median straight-line speed dips during rush hours, a direct congestion proxy.}
+    \includegraphics[width=0.485\textwidth]{../figures/trip_volume_by_hour.png}\hfill
+    \includegraphics[width=0.485\textwidth]{../figures/speed_by_hour.png}
+    \caption{Hourly trip demand (left) and median straight-line speed (right) across the day.}
 \end{figure}
 
-\textbf{3. Problem Formulation}
-
-\textbf{Task 1: Trip Duration Prediction (Supervised Regression)}\\
-\textit{Input $\rightarrow$ Output:} Temporal features (hour, weekday, month), pickup/dropoff coordinates, vendor/passenger fields, Haversine distance $\rightarrow$ predicted trip duration (seconds).
-\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=2pt]
-    \item[\textbullet] Travel-time forecasting for route planning and passenger information systems
-    \item[\textbullet] Real-time incident flagging when actual duration greatly exceeds prediction
-    \item[\textbullet] Dynamic bus/subway capacity allocation on parallel corridors
-    \item[\textbullet] Evidence base for time-zone congestion pricing
+\section*{3. Problem Formulation}
+\textbf{Task 1: Trip Duration Prediction}\\
+\textit{Mathematical task:} Supervised Regression\\
+\textit{Input $\rightarrow$ Output:} Temporal features (hour, weekday, month), pickup/dropoff coordinates, vendor/passenger fields, and Haversine distance $\rightarrow$ predicted trip duration (seconds).\\
+\textit{Business value:}
+\begin{itemize}[leftmargin=1.3em,itemsep=0pt,topsep=0pt]
+    \item Travel-time forecasting for route planning and passenger information systems.
+    \item Incident flagging when observed duration significantly exceeds model prediction.
+    \item Dynamic bus/subway capacity planning on parallel high-load corridors.
 \end{itemize}
-\textit{Planned models:} Linear Regression, Random Forest, Gradient Boosting.
+\textit{Planned models and evaluation:} Linear Regression, Random Forest, Gradient Boosting; performance reported with RMSE/MAE and error breakdown by time-of-day.
 
-\vspace{0.5em}
-\textbf{Task 2: High-Demand Zone Identification (Unsupervised Clustering)}\\
-\textit{Input $\rightarrow$ Output:} Pickup coordinates (optionally enriched with demand counts and mean duration) $\rightarrow$ cluster labels representing geographic demand zones.
-\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=2pt]
-    \item[\textbullet] Identify underserved high-demand areas for transit augmentation
-    \item[\textbullet] Prioritize zones for traffic signal and lane interventions
-    \item[\textbullet] Guide park-and-ride or bike-share station placement
-    \item[\textbullet] Inform zone-based congestion pricing and infrastructure spending
+\textbf{Task 2: High-Demand Zone Identification}\\
+\textit{Mathematical task:} Unsupervised Clustering\\
+\textit{Input $\rightarrow$ Output:} Pickup coordinates (optionally enriched with demand counts and mean duration) $\rightarrow$ cluster labels for geographic demand zones.\\
+\textit{Business value:}
+\begin{itemize}[leftmargin=1.3em,itemsep=0pt,topsep=0pt]
+    \item Identify underserved high-demand areas for transit augmentation.
+    \item Prioritize local interventions (signal timing, lane policy, and curb management).
+    \item Guide investment decisions such as bike-share, park-and-ride, and zone planning.
 \end{itemize}
-\textit{Planned models:} K-Means \textbf{vs.}\ DBSCAN (algorithm comparison).
+\textit{Planned models and evaluation:} K-Means \textbf{vs.} DBSCAN (required algorithm comparison); quality assessed using Silhouette Score and cluster interpretability.
 
-\vspace{0.5em}
-\textbf{Task 3: Congestion Level Classification (Supervised Multi-class)}\\
-\textit{Input $\rightarrow$ Output:} Zone ID, hour, weekday, historical trip count, and average speed $\rightarrow$ congestion class \{High, Medium, Low\}. Labels derived via speed-percentile thresholds across zone--time buckets.
-\begin{itemize}[leftmargin=1.2em,itemsep=1pt,topsep=2pt]
-    \item[\textbullet] Dynamic public-transit service frequency control
-    \item[\textbullet] Commuter-facing congestion alerts and route suggestions
-    \item[\textbullet] Optimized staffing and operations planning for transit agencies
-    \item[\textbullet] Data-backed policy support for staggered work hours
+\textbf{Task 3: Congestion Level Classification}\\
+\textit{Mathematical task:} Supervised Multi-class Classification\\
+\textit{Input $\rightarrow$ Output:} Zone ID, hour, weekday, historical trip count, and average speed $\rightarrow$ congestion class \{High, Medium, Low\}. Labels are derived using speed-percentile thresholds across zone--time buckets.\\
+\textit{Business value:}
+\begin{itemize}[leftmargin=1.3em,itemsep=0pt,topsep=0pt]
+    \item Dynamic transit service-frequency control by zone and time bucket.
+    \item Commuter-facing congestion alerts, route suggestions, and ETA guidance.
+    \item Operations and staffing planning with evidence for policy interventions.
 \end{itemize}
-\textit{Planned models:} Logistic Regression, Random Forest Classifier.
-
-\textbf{4. Expected Outcomes \& Next Steps}\
-Phase 2 (Weeks 9--15) will operationalize these tasks through preprocessing, feature pipeline finalization, weather-data integration, model comparison, and failure analysis. Expected outcomes are actionable recommendations such as targeted peak-hour bus deployment, high-friction zone interventions, and evidence-based congestion pricing policies linked to measured speed and demand patterns.
+\textit{Planned models and evaluation:} Logistic Regression and Random Forest Classifier; performance measured using Accuracy, macro-F1, and class-wise error analysis.
 
 \end{document}
